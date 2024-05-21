@@ -10,14 +10,15 @@ data.ahah <- read.csv("AHAH 2022 data.csv")
 
 # Filter data for required variable
 data.lookup <- data.ahah %>%
-  select(lsoa11,ah3gamb) %>% # Select required variables
+  select(lsoa11,ah3blue) %>% # Select required variables
   distinct() %>% # Remove duplicates
   rename("LSOA_CODE" = lsoa11)
 
 # Initialise dataframe to store weighted average scores by GP practice
 data_wa <- data.frame(
   practice_code = character(),
-  score = numeric()
+  score = numeric(),
+  n.patients = numeric()
 )
 
 # List all GP practice codes
@@ -46,8 +47,27 @@ total.patients = sum(interim$NUMBER_OF_PATIENTS) # Total number of patients in G
 average.score = total.score / total.patients # Weighted average score for GP practice
 
 # Add practice score value to the dataframe
-data_wa[i, ] <- list(list[i], average.score)
+data_wa[i, ] <- list(list[i], average.score, total.patients)
 
 i = i + 1
 
 }
+
+# Add QOF data
+data_wa$practice_code <- as.character(data_wa$practice_code)# Convert from list type to character
+
+data.qof <- read.csv("relevant qofs.csv") %>%
+  inner_join(data_wa, by = c("Practice.code" = "practice_code")) %>% # Add score data to QOF data, only where values exist
+  filter(n.patients > 500)
+
+# Plot
+ggplot(data.qof, aes(x = score, y = Prevalence.OF..non.diabetic.hyperglycaemia..2022.2023..in.age..18..)) +
+  geom_point() +  # Add points
+  labs(title = "Scatter Plot", x = "X LABEL", y = "Y LABEL") +  # Add labels
+  theme_minimal() 
+
+# Regression
+
+model <- lm(score ~ Prevalence.OF..non.diabetic.hyperglycaemia..2022.2023..in.age..18.., data = data.qof)
+
+summary(model)
